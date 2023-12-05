@@ -1,11 +1,12 @@
 import numpy as np
 from math import sqrt
+from numpy.fft import fft2, ifft2
 from scipy.signal import convolve2d
 from scipy.interpolate import interp1d
 
 
 class FastDeconvolution:
-    def __init__(self, blurred, kernel, lambda_, alpha):
+    def __init__(self, blurred, kernel, lambda_, alpha, verbose=False):
         if kernel.shape[0] % 2 != 1 or kernel.shape[1] % 2 != 1:
             raise ValueError("Error - blur kernel k must be odd-sized.")
         self.blurred = blurred
@@ -13,6 +14,7 @@ class FastDeconvolution:
         self.kernel = kernel
         self.lambda_ = lambda_
         self.alpha = alpha
+        self.verbose = verbose
         self.imsize = blurred.shape
         self.lut = dict()
 
@@ -23,7 +25,6 @@ class FastDeconvolution:
         beta_max=256,
         iter_in=1,
         lut_v_range=np.arange(-10, 10, 1e-4),
-        verbose=False,
     ):
         beta = beta_init
         # compute constant quantities
@@ -35,16 +36,17 @@ class FastDeconvolution:
             iter_out += 1
             gamma = beta / self.lambda_
             denom = denom1 + gamma * denom2
-            for i in range(iter_in):
+            for i in range(1, iter_in + 1):
                 # show cost
-                if verbose:
-                    print(f"Outer iteration {iter_out}, Inner iteration {i}, Cost {self.compute_cost(gx, gy)}\n")
+                if self.verbose:
+                    cost = self.compute_cost(gx, gy)
+                    print(f"Outer iteration {iter_out+1}, Inner iteration {i}, Cost {cost:.4e}")
                 # w-subproblem
                 wx = self.solve_w(gx, beta, lut_v_range)
                 wy = self.solve_w(gy, beta, lut_v_range)
                 # x-subproblem
-                nomin2 = np.fft.fft2(gradient_wx(wx, wy))
-                self.deblurred = np.real(np.fft.ifft2((nomin1 + gamma * nomin2) / denom))
+                nomin2 = fft2(gradient_wx(wx, wy))
+                self.deblurred = np.real(ifft2((nomin1 + gamma * nomin2) / denom))
                 # update v for equation 5
                 gx, gy = gradient_x(self.deblurred)
             beta *= beta_rate
@@ -73,22 +75,25 @@ class FastDeconvolution:
         k_fft = psf2otf(self.kernel, self.imsize)
         kernel_gx = np.array([1, -1], dtype=np.float64).reshape(1, 2)
         kernel_gy = np.array([1, -1], dtype=np.float64).reshape(2, 1)
-        nomin1 = np.conj(k_fft) * np.fft.fft2(self.blurred)
+        nomin1 = np.conj(k_fft) * fft2(self.blurred)
         denom1 = np.abs(k_fft) ** 2
-        denom2 = np.abs(psf2otf(kernel_gx, self.imsize)) ** 2 + np.abs(psf2otf(kernel_gy, self.imsize)) ** 2
+        denom2 = np.abs(fft2(kernel_gx, self.imsize)) ** 2 + np.abs(fft2(kernel_gy, self.imsize)) ** 2
         return nomin1, denom1, denom2
 
     def compute_cost(self, gx, gy):
         """
         compute cost using equation 2
         """
-        blurred_syn = convolve2d(self.deblurred, self.kernel, boundary="symm", mode="same")
+        blurred_syn = convolve2d(self.deblurred, self.kernel, boundary="wrap", mode="same")
         likelihood = np.sum(np.square(blurred_syn - self.blurred))
         return (self.lambda_ / 2) * likelihood + np.sum(np.abs(gx) ** self.alpha) + np.sum(np.abs(gy) ** self.alpha)
 
 
 def psf2otf(psf, shape):
-    return np.fft.fft2(np.fft.ifftshift(psf), shape)
+    psf_pad = np.zeros(shape, dtype=np.float64)
+    psf_pad[: psf.shape[0], : psf.shape[1]] = psf
+    otf = np.roll(psf_pad, (-int(psf.shape[0] / 2), -int(psf.shape[1] / 2)), axis=(0, 1))
+    return fft2(otf)
 
 
 def gradient_x(x):
@@ -118,7 +123,7 @@ def gradient_wx(wx, wy):
 
 
 def compute_w1(v, beta):
-    pass
+    return np.max(np.abs(v) - 1 / beta, 0) * np.sign(v)
 
 
 def compute_w23(v, beta):
