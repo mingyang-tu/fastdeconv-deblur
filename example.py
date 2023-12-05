@@ -1,5 +1,6 @@
 import numpy as np
 import cv2
+import time
 from scipy.signal import convolve2d
 
 from fastdeconv import FastDeconvolution
@@ -21,6 +22,14 @@ def create_blur(image, kernel, noise):
     return np.floor((blurred + noise) * 255.0) / 255.0
 
 
+def resize(img, max_size):
+    M = max(img.shape)
+    ratio = float(max_size) / float(M)
+    if M > max_size:
+        img = cv2.resize(img, (0, 0), fx=ratio, fy=ratio)
+    return img
+
+
 if __name__ == "__main__":
     # grayscale image / 0 ~ 1
     original = cv2.imread("TRA.bmp", cv2.IMREAD_GRAYSCALE).astype(np.float64) / 255.0
@@ -32,7 +41,10 @@ if __name__ == "__main__":
 
     # deblur image
     fd = FastDeconvolution(blurred, kernel, 2000, 2 / 3)
+    start = time.time()
     deblurred = fd.solve()
+    end = time.time()
+    print(f"Time taken for image of size {original.shape} is {end - start:.2f}s")
 
     # compute ssim and nmse
     nmse_blurred = nmse(blurred, original)
