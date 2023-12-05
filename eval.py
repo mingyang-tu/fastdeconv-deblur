@@ -5,7 +5,7 @@ def ssim(img1, img2, c1=0.005, c2=0.005):
     """
     compute ssim between two images
     """
-    assert len(img1.shape) == len(img2.shape)
+    assert img1.ndim == img2.ndim
     assert img1.shape[0] == img2.shape[0] and img1.shape[1] == img2.shape[1]
 
     mn = img1.shape[0] * img1.shape[1]
@@ -30,6 +30,7 @@ def nmse(img, target):
     """
     compute nmse between two images
     """
+    assert img.ndim == target.ndim
     assert img.shape[0] == target.shape[0] and img.shape[1] == target.shape[1]
 
     return np.sum((img - target) ** 2) / np.sum(target**2)

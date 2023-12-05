@@ -7,8 +7,16 @@ from scipy.interpolate import interp1d
 
 class FastDeconvolution:
     def __init__(self, blurred, kernel, lambda_, alpha, verbose=False):
-        if kernel.shape[0] % 2 != 1 or kernel.shape[1] % 2 != 1:
-            raise ValueError("Error - blur kernel k must be odd-sized.")
+        """
+        Input Parameters:
+        - blurred: observed blurry and noisy input grayscale image
+        - kernel:  convolution kernel
+        - lambda_: parameter that balances likelihood and prior term weighting
+        - alpha: parameter between 0 and 2
+        """
+        assert blurred.ndim == 2, "Blurred image must be grayscale."
+        assert kernel.shape[0] % 2 == kernel.shape[1] % 2 == 1, "Blur kernel k must be odd-sized."
+
         self.blurred = blurred
         self.deblurred = blurred.copy()
         self.kernel = kernel
@@ -53,6 +61,9 @@ class FastDeconvolution:
         return self.deblurred
 
     def solve_w(self, v, beta, lut_v_range):
+        """
+        solve w-subproblem
+        """
         if beta not in self.lut:
             print(f"Recomputing lookup table for new value of beta {beta:.3f}.")
             if abs(self.alpha - 1) < 1e-6:
@@ -123,10 +134,16 @@ def gradient_wx(wx, wy):
 
 
 def compute_w1(v, beta):
+    """
+    solve w-subproblem for alpha = 1
+    """
     return np.max(np.abs(v) - 1 / beta, 0) * np.sign(v)
 
 
 def compute_w23(v, beta):
+    """
+    solve w-subproblem for alpha = 2/3
+    """
     vsize = v.shape[0]
     v_complex = v.astype(np.complex128)
     epsilon = 1e-6
@@ -171,8 +188,14 @@ def compute_w23(v, beta):
 
 
 def compute_w12(v, beta):
+    """
+    solve w-subproblem for alpha = 1/2
+    """
     pass
 
 
 def compute_w_newton(v, beta):
+    """
+    for a general alpha, use Newton-Raphson
+    """
     pass
