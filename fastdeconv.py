@@ -73,7 +73,7 @@ class FastDeconvolution:
             elif abs(self.alpha - 1 / 2) < 1e-6:
                 self.lut[beta] = compute_w12(lut_v_range, beta)
             else:
-                self.lut[beta] = compute_w_newton(lut_v_range, beta)
+                self.lut[beta] = compute_w_newton(lut_v_range, beta, self.alpha)
         else:
             print(f"Reusing lookup table for beta {beta:.3f}.")
         interp = interp1d(lut_v_range, self.lut[beta], kind="linear", fill_value="extrapolate")
@@ -194,8 +194,18 @@ def compute_w12(v, beta):
     pass
 
 
-def compute_w_newton(v, beta):
+def compute_w_newton(v, beta, alpha, iterations=4):
     """
     for a general alpha, use Newton-Raphson
     """
-    pass
+    w = v.copy()
+    for _ in range(iterations):
+        dw = alpha * np.sign(w) * np.abs(w) ** (alpha - 1) + beta * (w - v)
+        ddw = alpha * (alpha - 1) * np.abs(w) ** (alpha - 2) + beta
+        w -= dw / ddw
+
+    w[np.isnan(w)] = 0
+
+    filt = (abs(w) ** alpha + beta / 2 * (w - v) ** 2) >= (beta / 2 * v**2)
+    w[filt] = 0
+    return w

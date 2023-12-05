@@ -13,7 +13,7 @@ def gaussian_kernel(size):
     return kernel
 
 
-def gaussian_noise(shape, amplitude=0.01, sigma=1):
+def gaussian_noise(shape, amplitude=0.01, sigma=1.0):
     return np.random.normal(0, sigma, shape) * amplitude
 
 
