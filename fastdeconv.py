@@ -137,7 +137,7 @@ def compute_w1(v, beta):
     """
     solve w-subproblem for alpha = 1
     """
-    return np.max(np.abs(v) - 1 / beta, 0) * np.sign(v)
+    return np.maximum(np.abs(v) - 1 / beta, 0) * np.sign(v)
 
 
 def compute_w23(v, beta):
