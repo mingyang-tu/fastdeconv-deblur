@@ -42,13 +42,14 @@ class FastDeconvolution:
         iter_out = 0
         while beta < beta_max:
             iter_out += 1
+            print(f"Outer iteration {iter_out}, Beta {beta:.2f}")
             gamma = beta / self.lambda_
             denom = denom1 + gamma * denom2
             for i in range(1, iter_in + 1):
                 # show cost
                 if self.verbose:
                     cost = self.compute_cost(gx, gy)
-                    print(f"Outer iteration {iter_out+1}, Inner iteration {i}, Cost {cost:.4e}")
+                    print(f"    Inner iteration {i}, Cost {cost:.4e}")
                 # w-subproblem
                 wx = self.solve_w(gx, beta, lut_v_range)
                 wy = self.solve_w(gy, beta, lut_v_range)
@@ -65,7 +66,6 @@ class FastDeconvolution:
         solve w-subproblem
         """
         if beta not in self.lut:
-            print(f"Recomputing lookup table for new value of beta {beta:.3f}.")
             if abs(self.alpha - 1) < 1e-6:
                 self.lut[beta] = compute_w1(lut_v_range, beta)
             elif abs(self.alpha - 2 / 3) < 1e-6:
@@ -74,8 +74,6 @@ class FastDeconvolution:
                 self.lut[beta] = compute_w12(lut_v_range, beta)
             else:
                 self.lut[beta] = compute_w_newton(lut_v_range, beta, self.alpha)
-        else:
-            print(f"Reusing lookup table for beta {beta:.3f}.")
         interp = interp1d(lut_v_range, self.lut[beta], kind="linear", fill_value="extrapolate")
         return interp(v)
 
