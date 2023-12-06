@@ -19,7 +19,7 @@ def gaussian_noise(shape, amplitude=0.01, sigma=1.0):
 
 def create_blur(image, kernel, noise):
     blurred = convolve2d(image, kernel, boundary="wrap", mode="same")
-    return np.floor((blurred + noise) * 255.0) / 255.0
+    return np.clip(np.floor((blurred + noise) * 255.0), 0, 255) / 255.0
 
 
 def resize(img, max_size):

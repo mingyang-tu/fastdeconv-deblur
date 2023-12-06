@@ -32,7 +32,7 @@ class FastDeconvolution:
         beta_rate=2 * sqrt(2),
         beta_max=256,
         iter_in=1,
-        lut_v_range=np.arange(-10, 10, 1e-4),
+        lut_v_range=np.arange(-1, 1, 1e-4),
     ):
         beta = beta_init
         # compute constant quantities
