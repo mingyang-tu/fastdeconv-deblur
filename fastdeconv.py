@@ -145,6 +145,7 @@ def compute_w23(v, beta):
     vsize = v.shape[0]
     v_complex = v.astype(np.complex128)
     epsilon = 1e-6
+    eps = 1e-9
 
     m = np.full(vsize, 8 / (27 * beta**3), dtype=np.complex128)
 
@@ -160,15 +161,15 @@ def compute_w23(v, beta):
     t2 = v3 / 4
     t3 = -1 / 8 * (m * v2)
     t4 = -t3 / 2 + np.sqrt(-m3 / 27 + (m2 * v4) / 256)
-    t5 = np.exp(np.log(t4) / 3)
-    t6 = 2 * (-5 / 18 * t1 + t5 + (m / (3 * t5)))
+    t5 = t4 ** (1 / 3)
+    t6 = 2 * (-5 / 18 * t1 + t5 + (m / (3 * t5 + eps)))
     t7 = np.sqrt(t1 / 3 + t6)
 
     # compute 4 roots
     roots = np.zeros((4, vsize), dtype=np.complex128)
     term1 = 0.75 * v_complex
-    term21 = np.sqrt(-(t1 + t6 + t2 / t7))
-    term22 = np.sqrt(-(t1 + t6 - t2 / t7))
+    term21 = np.sqrt(-(t1 + t6 + t2 / (t7 + eps)))
+    term22 = np.sqrt(-(t1 + t6 - t2 / (t7 + eps)))
     roots[0, :] = term1 + 0.5 * (t7 + term21)
     roots[1, :] = term1 + 0.5 * (t7 - term21)
     roots[2, :] = term1 + 0.5 * (-t7 + term22)
@@ -195,13 +196,14 @@ def compute_w12(v, beta):
     eps = 1e-9
 
     # precompute some terms
-    m = np.full(vsize, -0.25 / (beta * beta), dtype=np.float64) * np.sign(v)
+    m = np.full(vsize, -0.25 / (beta * beta), dtype=np.complex128) * np.sign(v)
+    m2 = m * m
     v2 = v_complex * v_complex
     v3 = v2 * v_complex
 
     # t1 ~ t3
     t1 = (2 / 3) * v_complex
-    t2 = (-27 * m - 2 * v3 + 3 * sqrt(3) * np.sqrt(27 * np.square(m) + 4 * m * v3)) ** (1 / 3)
+    t2 = (-27 * m - 2 * v3 + 3 * sqrt(3) * np.sqrt(27 * m2 + 4 * m * v3)) ** (1 / 3)
     t3 = v2 / (t2 + eps)
 
     # compute 3 roots
