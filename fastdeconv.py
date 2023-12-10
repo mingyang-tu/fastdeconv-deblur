@@ -189,7 +189,36 @@ def compute_w12(v, beta):
     """
     solve w-subproblem for alpha = 1/2
     """
-    pass
+    vsize = v.shape[0]
+    v_complex = v.astype(np.complex128)
+    epsilon = 1e-6
+    eps = 1e-9
+
+    # precompute some terms
+    m = np.full(vsize, -0.25 / (beta * beta), dtype=np.float64) * np.sign(v)
+    v2 = v_complex * v_complex
+    v3 = v2 * v_complex
+
+    # t1 ~ t3
+    t1 = (2 / 3) * v_complex
+    t2 = (-27 * m - 2 * v3 + 3 * sqrt(3) * np.sqrt(27 * np.square(m) + 4 * m * v3)) ** (1 / 3)
+    t3 = v2 / (t2 + eps)
+
+    # compute 3 roots
+    roots = np.zeros((3, vsize), dtype=np.complex128)
+    roots[0, :] = t1 + t2 / (3 * 2 ** (1 / 3)) + 2 ** (1 / 3) / 3 * t3
+    roots[1, :] = t1 - ((1 - sqrt(3) * 1j) / (6 * 2 ** (1 / 3))) * t2 - ((1 + sqrt(3) * 1j) / (3 * 2 ** (2 / 3))) * t3
+    roots[2, :] = t1 - ((1 + sqrt(3) * 1j) / (6 * 2 ** (1 / 3))) * t2 - ((1 - sqrt(3) * 1j) / (3 * 2 ** (2 / 3))) * t3
+
+    # filter out roots
+    vtile = np.tile(v, (3, 1))
+    c1 = np.abs(np.imag(roots)) < epsilon
+    c2 = np.real(roots) * np.sign(vtile) > (2 / 3) * np.abs(vtile)
+    c3 = np.real(roots) * np.sign(vtile) < np.abs(vtile)
+    roots[~(c1 & c2 & c3)] = 0
+
+    w = np.max(np.real(roots) * np.sign(vtile), axis=0) * np.sign(v)
+    return w
 
 
 def compute_w_newton(v, beta, alpha, iterations=4):
