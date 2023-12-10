@@ -147,14 +147,13 @@ def compute_w23(v, beta):
     epsilon = 1e-6
     eps = 1e-9
 
-    m = np.full(vsize, 8 / (27 * beta**3), dtype=np.complex128)
-
     # precompute some terms
+    m = np.full(vsize, 8 / (27 * beta**3), dtype=np.complex128)
+    m2 = m * m
+    m3 = m2 * m
     v2 = v_complex * v_complex
     v3 = v2 * v_complex
     v4 = v3 * v_complex
-    m2 = m * m
-    m3 = m2 * m
 
     # t1 ~ t7
     t1 = -9 / 8 * v2
