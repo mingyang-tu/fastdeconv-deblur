@@ -34,3 +34,15 @@ def nmse(img, target):
     assert img.shape[0] == target.shape[0] and img.shape[1] == target.shape[1]
 
     return np.sum((img - target) ** 2) / np.sum(target**2)
+
+
+def psnr(img, target):
+    """
+    compute psnr between two images
+    """
+    assert img.ndim == target.ndim
+    assert img.shape[0] == target.shape[0] and img.shape[1] == target.shape[1]
+    assert np.max(img) <= 1.0 and np.min(img) >= 0.0 and np.max(target) <= 1.0 and np.min(target) >= 0.0
+
+    mse = np.mean((img - target) ** 2)
+    return 10 * np.log10(1.0 / mse)
