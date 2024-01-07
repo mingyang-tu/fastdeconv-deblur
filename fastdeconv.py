@@ -54,12 +54,12 @@ class FastDeconvolution:
                 wx = self.solve_w(gx, beta, lut_v_range)
                 wy = self.solve_w(gy, beta, lut_v_range)
                 # x-subproblem
-                nomin2 = fft2(gradient_wx(wx, wy))
+                nomin2 = fft2(gradient_w(wx, wy))
                 self.deblurred = np.real(ifft2((nomin1 + gamma * nomin2) / denom))
                 # update v for equation 5
                 gx, gy = gradient_x(self.deblurred)
             beta *= beta_rate
-        return self.deblurred
+        return np.clip(self.deblurred, 0, 1)
 
     def solve_w(self, v, beta, lut_v_range):
         """
@@ -95,7 +95,11 @@ class FastDeconvolution:
         """
         blurred_syn = convolve2d(self.deblurred, self.kernel, boundary="wrap", mode="same")
         likelihood = np.sum(np.square(blurred_syn - self.blurred))
-        return (self.lambda_ / 2) * likelihood + np.sum(np.abs(gx) ** self.alpha) + np.sum(np.abs(gy) ** self.alpha)
+        return (
+            (self.lambda_ / 2) * likelihood
+            + np.sum(np.abs(gx) ** self.alpha)
+            + np.sum(np.abs(gy) ** self.alpha)
+        )
 
 
 def psf2otf(psf, shape):
@@ -118,7 +122,7 @@ def gradient_x(x):
     return gx, gy
 
 
-def gradient_wx(wx, wy):
+def gradient_w(wx, wy):
     """
     compute (F1^T * w1 + F2^T * w2) in equation 3
     """
@@ -194,6 +198,10 @@ def compute_w12(v, beta):
     epsilon = 1e-6
     eps = 1e-9
 
+    sqrt3 = sqrt(3)
+    cbrt2 = 2 ** (1 / 3)
+    cbrt22 = 2 ** (2 / 3)
+
     # precompute some terms
     m = np.full(vsize, -0.25 / (beta * beta), dtype=np.complex128) * np.sign(v)
     m2 = m * m
@@ -202,14 +210,14 @@ def compute_w12(v, beta):
 
     # t1 ~ t3
     t1 = (2 / 3) * v_complex
-    t2 = (-27 * m - 2 * v3 + 3 * sqrt(3) * np.sqrt(27 * m2 + 4 * m * v3)) ** (1 / 3)
+    t2 = (-27 * m - 2 * v3 + 3 * sqrt3 * np.sqrt(27 * m2 + 4 * m * v3)) ** (1 / 3)
     t3 = v2 / (t2 + eps)
 
     # compute 3 roots
     roots = np.zeros((3, vsize), dtype=np.complex128)
     roots[0, :] = t1 + t2 / (3 * 2 ** (1 / 3)) + 2 ** (1 / 3) / 3 * t3
-    roots[1, :] = t1 - ((1 - sqrt(3) * 1j) / (6 * 2 ** (1 / 3))) * t2 - ((1 + sqrt(3) * 1j) / (3 * 2 ** (2 / 3))) * t3
-    roots[2, :] = t1 - ((1 + sqrt(3) * 1j) / (6 * 2 ** (1 / 3))) * t2 - ((1 - sqrt(3) * 1j) / (3 * 2 ** (2 / 3))) * t3
+    roots[1, :] = t1 - ((1 - sqrt3 * 1j) / (6 * cbrt2)) * t2 - ((1 + sqrt3 * 1j) / (3 * cbrt22)) * t3
+    roots[2, :] = t1 - ((1 + sqrt3 * 1j) / (6 * cbrt2)) * t2 - ((1 - sqrt3 * 1j) / (3 * cbrt22)) * t3
 
     # filter out roots
     vtile = np.tile(v, (3, 1))
